@@ -1,35 +1,28 @@
 package main
 
 import (
-	"html/template"
+	"log"
 	"net/http"
-	"path"
+
+	"github.com/gin-gonic/gin"
 )
 
-type Profile struct {
-	Name    string
-	Hobbies []string
+func defaultHandler(c *gin.Context)  {
+	c.HTML(http.StatusOK, "default.html", gin.H{})
 }
 
-func main() {
-	http.HandleFunc("/", foo)
-	http.ListenAndServe(":3000", nil)
+func setupRouter(r *gin.Engine)  {
+	r.LoadHTMLGlob("templates/**/*.html")
+	r.GET("/", defaultHandler)
 }
 
-func foo(w http.ResponseWriter, r *http.Request) {
-	profile := Profile{"Alex", []string{"snowboarding", "programming"}}
+func main()  {
+	r := gin.Default()
 
-	lp := path.Join("templates", "layout.html")
-	fp := path.Join("templates", "index.html")
+	setupRouter(r)
 
-	// Note that the layout file must be the first parameter in ParseFiles
-	tmpl, err := template.ParseFiles(lp, fp)
+	err := r.Run(":80")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := tmpl.Execute(w, profile); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Fatalf("gin Run error: %s", err)
 	}
 }

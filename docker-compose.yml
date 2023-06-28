@@ -1,5 +1,7 @@
 # Use root/example as user/password credentials
 version: '3.1'
+
+
 services:
   mysql:
     image: mysql
@@ -19,13 +21,14 @@ services:
       - gin-app
 
   golang:
+    image: golang:1.20
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ${PROJECT_NAME}-golang
     restart: "always"
     ports:
-      - "8080:80"
+      - "80:80"
     networks:
       - gin-app
 

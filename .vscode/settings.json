@@ -1,0 +1,33 @@
+{
+    "sqltools.connections": [
+        {
+            "mysqlOptions": {
+                "authProtocol": "xprotocol"
+            },
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MySQL",
+            "name": "file_cloud",
+            "database": "file_cloud",
+            "username": "file_cloud",
+            "password": "Todor1990///",
+            "connectionTimeout": 15
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "previewLimit": 50,
+            "server": "mysql",
+            "port": 3306,
+            "driver": "MySQL",
+            "name": "gin-app",
+            "group": "gin-app",
+            "database": "gin-app",
+            "username": "gin-app",
+            "password": "pa55word"
+        }
+    ]
+}
