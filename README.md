@@ -1,0 +1,1 @@
+https://universalglue.dev/posts/solid-foundation-new-gin-app/
