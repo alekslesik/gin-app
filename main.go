@@ -11,17 +11,17 @@ func defaultHandler(c *gin.Context)  {
 	c.HTML(http.StatusOK, "default.html", gin.H{})
 }
 
-func setupRouter(r *gin.Engine)  {
-	r.LoadHTMLGlob("templates/**/*.html")
-	r.GET("/", defaultHandler)
+func setupRouter(router *gin.Engine)  {
+	router.LoadHTMLGlob("templates/**/*.html")
+	router.GET("/", defaultHandler)
 }
 
 func main()  {
-	r := gin.Default()
+	router := gin.Default()
 
-	setupRouter(r)
+	setupRouter(router)
 
-	err := r.Run(":80")
+	err := router.Run(":80")
 	if err != nil {
 		log.Fatalf("gin Run error: %s", err)
 	}
