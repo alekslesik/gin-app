@@ -1,0 +1,21 @@
+stages:
+    - build
+
+build:
+    stage: build
+    image: golang:1.17.6-alpine3.15
+    script:
+        - apk update
+        - apk add build-base
+        - wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.43.0
+        - PATH=./bin/:$PATH
+        - golangci-lint run -v --timeout 180s
+        - go test -race -coverprofile=cover.out ./...
+        - “go tool cover -func cover.out | sed -n -e '/^total/s/:.*statements)[^0-9]*/: /p'“
+        - go build .
+        - go install github.com/jstemmer/go-junit-report@v0.9.1
+        - go test -v ./...  2>&1 | go-junit-report report.xml
+    artifacts:
+        when: always
+        reports:
+            junit: report.xml
