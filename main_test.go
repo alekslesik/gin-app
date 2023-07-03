@@ -54,18 +54,52 @@ func TestBookIndex(t *testing.T) {
 	w := httptest.NewRecorder()
 	ctx, r := gin.CreateTestContext(w)
 	setupRouter(r, freshDb(t))
-	req, err := http.NewRequestWithContext(ctx, "GET", "/books/", nil)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/books/", nil)
 	if err != nil {
 		t.Errorf("got error: %s", err)
 	}
+
 	r.ServeHTTP(w, req)
 	if http.StatusOK != w.Code {
 		t.Fatalf("expected response code %d, got %d", http.StatusOK, w.Code)
 	}
+
 	body := w.Body.String()
 	expected := "<h2>My Books</h2>"
 
 	if !strings.Contains(body, expected) {
 		t.Fatalf("expected response body to contain '%s', got '%s'", expected, body)
 	}
+}
+
+func TestBookIndexError(t *testing.T) {
+	t.Parallel()
+
+	db := freshDb(t)
+
+	if err := db.Migrator().DropTable(&Book{}); err != nil {
+		t.Fatalf("got error: %s", err)
+	}
+
+	_ = getHasStatus(t, db, "/books/", http.StatusInternalServerError)
+}
+
+func getHasStatus(t *testing.T, db *gorm.DB, path string, status int) *httptest.ResponseRecorder {
+	t.Helper()
+
+	w := httptest.NewRecorder()
+	ctx, router := gin.CreateTestContext(w)
+	setupRouter(router, db)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/books/", nil)
+	if err != nil {
+		t.Errorf("got error: %s", err)
+	}
+
+	router.ServeHTTP(w, req)
+	if status != w.Code {
+		t.Errorf("expected response code %d, got %d", status, w.Code)
+	}
+	return  w
 }
