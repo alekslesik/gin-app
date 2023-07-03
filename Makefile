@@ -14,13 +14,14 @@ lint: .lint
 	golangci-lint run --timeout 180s
 	@touch $@
 
+# create .coverage dir
 .coverage:
 	@mkdir -p .coverage
 
 .PHONY: check
 check: .coverage ./.coverage/$(PROJECT).out
 
- ./.coverage/$(PROJECT).out: $(ALLGO) $(ALLHTML) Makefile
+./.coverage/$(PROJECT).out: $(ALLGO) $(ALLHTML) Makefile
 	go test $(TESTFLAGS) -coverprofile=./.coverage/$(PROJECT).out ./...
 
 .PHONY: cover
