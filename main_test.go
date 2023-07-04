@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -85,25 +86,6 @@ func TestBookIndexError(t *testing.T) {
 	_ = getHasStatus(t, db, "/books/", http.StatusInternalServerError)
 }
 
-func getHasStatus(t *testing.T, db *gorm.DB, path string, status int) *httptest.ResponseRecorder {
-	t.Helper()
-
-	w := httptest.NewRecorder()
-	ctx, router := gin.CreateTestContext(w)
-	setupRouter(router, db)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/books/", nil)
-	if err != nil {
-		t.Errorf("got error: %s", err)
-	}
-
-	router.ServeHTTP(w, req)
-	if status != w.Code {
-		t.Errorf("expected response code %d, got %d", status, w.Code)
-	}
-	return  w
-}
-
 func TestBookIndexNominal(t *testing.T)  {
 	t.Parallel()
 
@@ -143,9 +125,55 @@ func TestBookIndexNominal(t *testing.T)  {
 		"<li>Book2 -- Author2</li>",
 	}
 
+	bodyHasFragments(t, body, fragments)
+}
+
+// Helpers
+
+func bodyHasFragments(t *testing.T, body string, fragments []string) bool {
+	t.Helper()
 	for _, fragment := range fragments {
 		if !strings.Contains(body, fragment) {
-			t.Fatalf("expected body to contain '%s', got %s", fragment, body)
-		}
+			t.Fatalf("expected body to contain '%s', got %s", fragment, body)		}
 	}
+
+	return true
+}
+
+
+func getHasStatus(t *testing.T, db *gorm.DB, path string, status int) *httptest.ResponseRecorder {
+	t.Helper()
+
+	w := httptest.NewRecorder()
+	ctx, router := gin.CreateTestContext(w)
+	setupRouter(router, db)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/books/", nil)
+	if err != nil {
+		t.Errorf("got error: %s", err)
+	}
+
+	router.ServeHTTP(w, req)
+	if status != w.Code {
+		t.Errorf("expected response code %d, got %d", status, w.Code)
+	}
+	return  w
+}
+
+func createBooks(t *testing.T, db *gorm.DB, count int) []*Book {
+	books := []*Book{}
+	t.Helper()
+	for i := 0; i < count; i++ {
+		b := &Book{
+			Title: fmt.Sprintf("Book%03d", i),
+			Author: fmt.Sprintf("Author%03d", i),
+		}
+		if err := db.Create(b).Error; err != nil {
+			t.Fatalf("error creating book: %s", err)
+		}
+
+		books = append(books, b)
+	}
+
+	return books
 }
