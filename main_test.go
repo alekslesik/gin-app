@@ -103,3 +103,49 @@ func getHasStatus(t *testing.T, db *gorm.DB, path string, status int) *httptest.
 	}
 	return  w
 }
+
+func TestBookIndexNominal(t *testing.T)  {
+	t.Parallel()
+
+	db := freshDb(t)
+
+	b := &Book{Title: "Book1", Author: "Author1"}
+
+	if err := db.Create(&b).Error; err != nil {
+		t.Fatalf("error creating book: %s", err)
+	}
+
+	b = &Book{Title: "Book2", Author: "Author2"}
+
+	if err := db.Create(&b).Error; err != nil {
+		t.Fatalf("error creating book: %s", err)
+	}
+
+	w := httptest.NewRecorder()
+	ctx, router := gin.CreateTestContext(w)
+	setupRouter(router, db)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/books/", nil)
+	if err != nil {
+		t.Errorf("got error: %s", err)
+	}
+
+	router.ServeHTTP(w, req)
+	if http.StatusOK != w.Code {
+		t.Errorf("expected response code %d, got %d", http.StatusOK, w.Code)
+	}
+
+	body := w.Body.String()
+
+	fragments :=[]string{
+		"<h2>My Books</h2>",
+		"<li>Book1 -- Author1</li>",
+		"<li>Book2 -- Author2</li>",
+	}
+
+	for _, fragment := range fragments {
+		if !strings.Contains(body, fragment) {
+			t.Fatalf("expected body to contain '%s', got %s", fragment, body)
+		}
+	}
+}
