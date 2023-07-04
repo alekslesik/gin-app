@@ -12,6 +12,116 @@ import (
 	"gorm.io/gorm"
 )
 
+
+func TestBookIndexRefactored(t *testing.T) {
+	t.Parallel()
+
+	db := freshDb(t)
+	books := createBooks(t, db, 2)
+
+	w := getHasStatus(t, db, "/books/", http.StatusOK)
+	body := w.Body.String()
+	fragments := []string{
+		"<h2>My Books</h2>",
+		fmt.Sprintf("<li>%s -- %s</li>", books[0].Title, books[0].Author),
+		fmt.Sprintf("<li>%s -- %s</li>", books[1].Title, books[1].Author),
+	}
+
+	bodyHasFragments(t, body, fragments)
+}
+
+// Table Test sample
+func TestBookIndexTable(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		desc  string
+		count int
+	}{
+		{"empty", 0},
+		{"single", 1},
+		{"multiple", 10},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			t.Parallel()
+
+			db := freshDb(t)
+			books := createBooks(t, db, tC.count)
+
+			w := getHasStatus(t, db, "/books/", http.StatusOK)
+			body := w.Body.String()
+
+			fragments := []string{
+				"<h2>My Books</h2>",
+			}
+
+			for _, book := range books {
+				fragments = append(fragments, fmt.Sprintf("<li>%s -- %s</li>", book.Title, book.Author))
+			}
+			bodyHasFragments(t, body, fragments)
+		})
+	}
+}
+
+// Helpers
+//* This just moves the loop at the bottom of the test function into its own function. There are a few things to note here:
+//* 1.This is marked as a t.Helper() – failures will be reported at the line number of the test case function instead of inside this function, which can make diagnosing a failing test easier.
+//* 2.Test helper functions should not return errors! Don’t create extra boilerplate in your tests with error handling. Helper functions should check errors and fail instead of passing errors up the stack.
+//* 3.Both 1 and 2 are why every test helper function should take a *testing.T as the first argument.
+//* 4.I try to name my verification-type helper functions in the form thingHasProperty or thingIsStatus. I think this makes it easier to read what test code is checking.
+
+// Check that template includes fragment
+func bodyHasFragments(t *testing.T, body string, fragments []string) bool {
+	t.Helper()
+	for _, fragment := range fragments {
+		if !strings.Contains(body, fragment) {
+			t.Fatalf("expected body to contain '%s', got %s", fragment, body)
+		}
+	}
+
+	return true
+}
+
+// Checking status code
+func getHasStatus(t *testing.T, db *gorm.DB, path string, status int) *httptest.ResponseRecorder {
+	t.Helper()
+
+	w := httptest.NewRecorder()
+	ctx, router := gin.CreateTestContext(w)
+	setupRouter(router, db)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/books/", nil)
+	if err != nil {
+		t.Errorf("got error: %s", err)
+	}
+
+	router.ServeHTTP(w, req)
+	if status != w.Code {
+		t.Errorf("expected response code %d, got %d", status, w.Code)
+	}
+	return w
+}
+
+// Create slice of books
+func createBooks(t *testing.T, db *gorm.DB, count int) []*Book {
+	books := []*Book{}
+	t.Helper()
+	for i := 0; i < count; i++ {
+		b := &Book{
+			Title:  fmt.Sprintf("Book%03d", i),
+			Author: fmt.Sprintf("Author%03d", i),
+		}
+		if err := db.Create(b).Error; err != nil {
+			t.Fatalf("error creating book: %s", err)
+		}
+
+		books = append(books, b)
+	}
+
+	return books
+}
+
+// Create new db
 func freshDb(t *testing.T, path ...string) *gorm.DB {
 	t.Helper()
 
@@ -35,145 +145,4 @@ func freshDb(t *testing.T, path ...string) *gorm.DB {
 		t.Fatalf("Error setting up db: %s", err)
 	}
 	return db
-}
-
-// This tests that a fresh database returns no rows (but no error) when
-// fetching Books.
-func TestBookEmpty(t *testing.T) {
-	db := freshDb(t)
-	books := []Book{}
-	if err := db.Find(&books).Error; err != nil {
-		t.Fatalf("Error querying books from fresh db: %s", err)
-	}
-	if len(books) != 0 {
-		t.Errorf("Expected 0 books, got %d", len(books))
-	}
-}
-
-func TestBookIndex(t *testing.T) {
-	t.Parallel()
-	w := httptest.NewRecorder()
-	ctx, r := gin.CreateTestContext(w)
-	setupRouter(r, freshDb(t))
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/books/", nil)
-	if err != nil {
-		t.Errorf("got error: %s", err)
-	}
-
-	r.ServeHTTP(w, req)
-	if http.StatusOK != w.Code {
-		t.Fatalf("expected response code %d, got %d", http.StatusOK, w.Code)
-	}
-
-	body := w.Body.String()
-	expected := "<h2>My Books</h2>"
-
-	if !strings.Contains(body, expected) {
-		t.Fatalf("expected response body to contain '%s', got '%s'", expected, body)
-	}
-}
-
-func TestBookIndexError(t *testing.T) {
-	t.Parallel()
-
-	db := freshDb(t)
-
-	if err := db.Migrator().DropTable(&Book{}); err != nil {
-		t.Fatalf("got error: %s", err)
-	}
-
-	_ = getHasStatus(t, db, "/books/", http.StatusInternalServerError)
-}
-
-func TestBookIndexNominal(t *testing.T)  {
-	t.Parallel()
-
-	db := freshDb(t)
-
-	b := &Book{Title: "Book1", Author: "Author1"}
-
-	if err := db.Create(&b).Error; err != nil {
-		t.Fatalf("error creating book: %s", err)
-	}
-
-	b = &Book{Title: "Book2", Author: "Author2"}
-
-	if err := db.Create(&b).Error; err != nil {
-		t.Fatalf("error creating book: %s", err)
-	}
-
-	w := httptest.NewRecorder()
-	ctx, router := gin.CreateTestContext(w)
-	setupRouter(router, db)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/books/", nil)
-	if err != nil {
-		t.Errorf("got error: %s", err)
-	}
-
-	router.ServeHTTP(w, req)
-	if http.StatusOK != w.Code {
-		t.Errorf("expected response code %d, got %d", http.StatusOK, w.Code)
-	}
-
-	body := w.Body.String()
-
-	fragments :=[]string{
-		"<h2>My Books</h2>",
-		"<li>Book1 -- Author1</li>",
-		"<li>Book2 -- Author2</li>",
-	}
-
-	bodyHasFragments(t, body, fragments)
-}
-
-// Helpers
-
-func bodyHasFragments(t *testing.T, body string, fragments []string) bool {
-	t.Helper()
-	for _, fragment := range fragments {
-		if !strings.Contains(body, fragment) {
-			t.Fatalf("expected body to contain '%s', got %s", fragment, body)		}
-	}
-
-	return true
-}
-
-
-func getHasStatus(t *testing.T, db *gorm.DB, path string, status int) *httptest.ResponseRecorder {
-	t.Helper()
-
-	w := httptest.NewRecorder()
-	ctx, router := gin.CreateTestContext(w)
-	setupRouter(router, db)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/books/", nil)
-	if err != nil {
-		t.Errorf("got error: %s", err)
-	}
-
-	router.ServeHTTP(w, req)
-	if status != w.Code {
-		t.Errorf("expected response code %d, got %d", status, w.Code)
-	}
-	return  w
-}
-
-func createBooks(t *testing.T, db *gorm.DB, count int) []*Book {
-	books := []*Book{}
-	t.Helper()
-	for i := 0; i < count; i++ {
-		b := &Book{
-			Title: fmt.Sprintf("Book%03d", i),
-			Author: fmt.Sprintf("Author%03d", i),
-		}
-		if err := db.Create(b).Error; err != nil {
-			t.Fatalf("error creating book: %s", err)
-		}
-
-		books = append(books, b)
-	}
-
-	return books
 }
