@@ -12,7 +12,6 @@ import (
 	"gorm.io/gorm"
 )
 
-
 func TestBookIndexRefactored(t *testing.T) {
 	t.Parallel()
 
@@ -63,6 +62,33 @@ func TestBookIndexTable(t *testing.T) {
 	}
 }
 
+func TestBookNewGet(t *testing.T) {
+	t.Parallel()
+	tcs := []struct {
+		name string
+	}{
+		{"basic"},
+	}
+
+	for i := range tcs {
+		tc := &tcs[i]
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			db := freshDb(t)
+			w := getHasStatus(t, db, "/books/new", http.StatusOK)
+			body := w.Body.String()
+			fragments := []string{
+				"<h2>Add a Book</h2>",
+				`<form action="/books/new" method="POST">`,
+				`<input type="text" name="title" id="title"`,
+				`<input type="text" name="author" id="author"`,
+				`<button type="submit"`,
+			}
+			bodyHasFragments(t, body, fragments)
+		})
+	}
+}
+
 // Helpers
 //* This just moves the loop at the bottom of the test function into its own function. There are a few things to note here:
 //* 1.This is marked as a t.Helper() – failures will be reported at the line number of the test case function instead of inside this function, which can make diagnosing a failing test easier.
@@ -90,7 +116,7 @@ func getHasStatus(t *testing.T, db *gorm.DB, path string, status int) *httptest.
 	ctx, router := gin.CreateTestContext(w)
 	setupRouter(router, db)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/books/", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		t.Errorf("got error: %s", err)
 	}

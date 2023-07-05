@@ -1,0 +1,17 @@
+{{ define "books/new.html" }}
+{{ template "base/header.html" . }}
+
+<h2>Add a Book</h2>
+<form action="/books/new" method="POST">
+    <div>
+        <label for="title">Title</label>
+        <input type="text" name="title" id="title">
+    </div>
+    <div>
+        <label for="author">Author</label>
+        <input type="text" name="author" id="author">
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+</form>
+{{ template "base/footer.html" . }}
+{{ end }}

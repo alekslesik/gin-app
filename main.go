@@ -22,12 +22,14 @@ type Book struct {
 // }
 
 // Setup router
-func setupRouter(router *gin.Engine, db *gorm.DB) {
-	router.LoadHTMLGlob("templates/**/*.html")
-	router.Use(connectDatabase(db))
-	router.GET("/books/", bookIndexHandler)
-	router.GET("/", func (ctx *gin.Context)  {
-		ctx.Redirect(http.StatusMovedPermanently, "/books/")
+func setupRouter(r *gin.Engine, db *gorm.DB) {
+	r.LoadHTMLGlob("templates/**/*.html")
+	r.Use(connectDatabase(db))
+	r.GET("/books/", bookIndexHandler)
+	r.GET("/books/new", bookNewGetHandler)
+	r.POST("/books/new", bookNewPostHandler)
+	r.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/books/")
 	})
 }
 
@@ -78,4 +80,12 @@ func bookIndexHandler(ctx *gin.Context)  {
 	}
 
 	ctx.HTML(http.StatusOK, "books/index.html", gin.H{"books" : books})
+}
+
+func bookNewGetHandler(ctx *gin.Context)  {
+	ctx.HTML(http.StatusOK, "books/new.html", gin.H{})
+}
+
+func bookNewPostHandler(ctx *gin.Context)  {
+
 }
