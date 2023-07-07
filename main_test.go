@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -85,6 +86,202 @@ func TestBookNewGet(t *testing.T) {
 				`<button type="submit"`,
 			}
 			bodyHasFragments(t, body, fragments)
+		})
+	}
+}
+
+func TestBookNewPost1(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name   string
+		data   gin.H
+		status int
+	}{
+		{
+			name:   "nominal",
+			data:   gin.H{"title": "my book", "author": "me"},
+			status: http.StatusFound,
+		},
+	}
+
+	for i := range testCases {
+		tC := &testCases[i]
+		t.Run(tC.name, func(t *testing.T) {
+			t.Parallel()
+			db := freshDb(t)
+			postHasStatus(t, db, "/books/new", &tC.data, tC.status)
+		})
+	}
+}
+
+func TestBookNewPost2(t *testing.T) {
+	t.Parallel()
+
+	dropTable := func(t *testing.T, db *gorm.DB) {
+		err := db.Migrator().DropTable("books")
+		if err != nil {
+			t.Fatalf("error dropping table 'books': %s", err)
+		}
+	}
+
+	testCases := []struct {
+		name   string
+		data   gin.H
+		setup  func(*testing.T, *gorm.DB)
+		status int
+	}{
+		{
+			// This causes Bind() to fail, because ID is an integer
+			// field and the parsing will fail when it tries to map
+			// the ID.
+			name:   "bind_error",
+			data:   gin.H{"ID": "xxx", "title": "mytitle", "author": "me"},
+			status: http.StatusBadRequest,
+		},
+		{
+			// This makes the manual field validation fail because the
+			// author is empty.
+			name:   "empty_author",
+			data:   gin.H{"title": "1"},
+			status: http.StatusBadRequest,
+		},
+		{
+			// This makes the manual field validation fail because the
+			// title is empty.
+			name:   "empty_title",
+			data:   gin.H{"author": "9"},
+			status: http.StatusBadRequest,
+		},
+		{
+			// This makes the manual field validation fail because both
+			// title and author are empty.
+			name:   "empty",
+			data:   gin.H{},
+			status: http.StatusBadRequest,
+		},
+		{
+			name:   "db_error",
+			data:   gin.H{"title": "a", "author": "b"},
+			setup:  dropTable,
+			status: http.StatusInternalServerError,
+		},
+	}
+
+	for i := range testCases {
+		tC := &testCases[i]
+		t.Run(tC.name, func(t *testing.T) {
+			t.Parallel()
+			db := freshDb(t)
+			if tC.setup != nil {
+				tC.setup(t, db)
+			}
+
+			_ = postHasStatus(t, db, "/books/new", &tC.data, tC.status)
+		})
+	}
+}
+
+func TestBookNewPost3(t *testing.T) {
+	t.Parallel()
+
+	dropTable := func(t *testing.T, db *gorm.DB) {
+		err := db.Migrator().DropTable("books")
+		if err != nil {
+			t.Fatalf("error dropping table 'books': %s", err)
+		}
+	}
+
+	tcs := []struct {
+		name   string
+		data   gin.H
+		setup  func(*testing.T, *gorm.DB)
+		status int
+	}{
+		{
+			name:   "nominal",
+			data:   gin.H{"title": "my book", "author": "me"},
+			status: http.StatusFound,
+		},
+		{
+			// This causes Bind() to fail, because ID is an integer
+			// field and the parsing will fail when it tries to map
+			// the ID.
+			name:   "bind_error",
+			data:   gin.H{"ID": "xxx", "title": "mytitle", "author": "me"},
+			status: http.StatusBadRequest,
+		},
+		{
+			// This makes the manual field validation fail because the
+			// author is empty.
+			name:   "empty_author",
+			data:   gin.H{"title": "1"},
+			status: http.StatusBadRequest,
+		},
+		{
+			// This makes the manual field validation fail because the
+			// title is empty.
+			name:   "empty_title",
+			data:   gin.H{"author": "9"},
+			status: http.StatusBadRequest,
+		},
+		{
+			// This makes the manual field validation fail because both
+			// title and author are empty.
+			name:   "empty",
+			data:   gin.H{},
+			status: http.StatusBadRequest,
+		},
+		{
+			name:   "db_error",
+			data:   gin.H{"title": "a", "author": "b"},
+			setup:  dropTable,
+			status: http.StatusInternalServerError,
+		},
+	}
+
+	for i := range tcs {
+		tc := &tcs[i]
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			db := freshDb(t)
+			if tc.setup != nil {
+				tc.setup(t, db)
+			}
+			w := postHasStatus(t, db, "/books/new", &tc.data,
+				tc.status)
+
+			// NEW CHECKS HERE
+			if tc.status == http.StatusFound {
+				// Make sure the record is in the db.
+				books := []Book{}
+				result := db.Find(&books)
+				if result.Error != nil {
+					t.Fatalf("error fetching books: %s", result.Error)
+				}
+				if result.RowsAffected != 1 {
+					t.Fatalf("expected 1 row affected, got %d",
+						result.RowsAffected)
+				}
+				if tc.data["title"] != books[0].Title {
+					t.Fatalf("expected title '%s', got '%s",
+						tc.data["title"], books[0].Title)
+				}
+				if tc.data["author"] != books[0].Author {
+					t.Fatalf("expected author '%s', got '%s",
+						tc.data["author"], books[0].Author)
+				}
+
+				// Check the redirect location.
+				url, err := w.Result().Location()
+				if err != nil {
+					t.Fatalf("location check error: %s", err)
+				}
+
+				if url.String()  != "/books/" {
+					t.Errorf("expected location '/books/', got '%s'",
+						url.String())
+				}
+			}
 		})
 	}
 }
@@ -171,4 +368,36 @@ func freshDb(t *testing.T, path ...string) *gorm.DB {
 		t.Fatalf("Error setting up db: %s", err)
 	}
 	return db
+}
+
+func postHasStatus(t *testing.T, db *gorm.DB, path string, h *gin.H, status int) *httptest.ResponseRecorder {
+	t.Helper()
+
+	data := url.Values{}
+
+	for k, vi := range *h {
+		v := vi.(string)
+
+		data.Set(k, v)
+	}
+
+	w := httptest.NewRecorder()
+	ctx, router := gin.CreateTestContext(w)
+	setupRouter(router, db)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", path, strings.NewReader(data.Encode()))
+	if err != nil {
+		t.Errorf("got error: %s", err)
+	}
+
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	router.ServeHTTP(w, req)
+	responseHasCode(t, w, status)
+	return w
+}
+
+func responseHasCode(t *testing.T, w *httptest.ResponseRecorder, expected int) {
+	if expected != w.Code {
+		t.Errorf("expected response code %d, got %d", expected, w.Code)
+	}
 }

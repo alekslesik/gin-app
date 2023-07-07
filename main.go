@@ -12,14 +12,9 @@ import (
 
 type Book struct {
 	ID     uint
-	Title  string
-	Author string
+	Title  string `form:"title"`
+	Author string `form:"author"`
 }
-
-// Set default Handler
-// func defaultHandler(c *gin.Context) {
-// 	c.HTML(http.StatusOK, "default.html", gin.H{})
-// }
 
 // Setup router
 func setupRouter(r *gin.Engine, db *gorm.DB) {
@@ -34,7 +29,7 @@ func setupRouter(r *gin.Engine, db *gorm.DB) {
 }
 
 // Middleware for connecting to database
-func connectDatabase(db *gorm.DB) gin.HandlerFunc  {
+func connectDatabase(db *gorm.DB) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		ctx.Set("database", db)
 	}
@@ -70,7 +65,7 @@ func main() {
 	}
 }
 
-func bookIndexHandler(ctx *gin.Context)  {
+func bookIndexHandler(ctx *gin.Context) {
 	db := ctx.Value("database").(*gorm.DB)
 	books := []Book{}
 
@@ -79,13 +74,33 @@ func bookIndexHandler(ctx *gin.Context)  {
 		return
 	}
 
-	ctx.HTML(http.StatusOK, "books/index.html", gin.H{"books" : books})
+	ctx.HTML(http.StatusOK, "books/index.html", gin.H{"books": books})
 }
 
-func bookNewGetHandler(ctx *gin.Context)  {
+func bookNewGetHandler(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "books/new.html", gin.H{})
 }
 
-func bookNewPostHandler(ctx *gin.Context)  {
+func bookNewPostHandler(ctx *gin.Context) {
+	book := &Book{}
 
+	if err := ctx.Bind(book); err != nil {
+		// Note: if there's a bind error, Gin will call
+		// c.AbortWithError. We just need to return here.
+		return
+	}
+
+	// FIXME: There's a better way to do this validation!
+	if book.Title == "" || book.Author == "" {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	db := ctx.Value("database").(*gorm.DB)
+	if err := db.Create(book).Error; err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	ctx.Redirect(http.StatusFound, "/books/")
 }
