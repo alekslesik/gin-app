@@ -1,4 +1,4 @@
 
 ### Use Gin, GORM
 
-https://universalglue.dev/posts/gin-post-form-data/
+https://universalglue.dev/posts/semgrep-rules-for-go-web-projects/
