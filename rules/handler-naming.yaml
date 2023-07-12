@@ -1,0 +1,16 @@
+---
+rules:
+- id: handler-naming
+  languages: [go]
+  message: Naming of handlers should be <thing><CrudAction><Method>
+  severity: WARNING
+  patterns:
+  - pattern: |
+      func $FUNC($C *gin.Context) {
+        ...
+      }      
+  - metavariable-pattern:
+      metavariable: $FUNC
+      patterns:
+      # Regex alternatives avoid having a name like thingDeleteDelete...
+      - pattern-not-regex: "^[a-z]+((Index|Show|New|Edit)(Get|Post|Patch)|Delete)$"

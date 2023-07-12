@@ -1,0 +1,20 @@
+---
+rules:
+- id: abortwithstatus-followed-by-return
+  languages: [go]
+  message: c.AbortWithError, AbortWithStatus, and AbortWithStatusJSON should always be followed by return
+  severity: WARNING
+  patterns:
+  - pattern-either:
+    - pattern: $C.AbortWithError(...)
+    - pattern: $C.AbortWithStatus(...)
+    - pattern: $C.AbortWithStatusJSON(...)
+  - pattern-not-inside: |
+      $C.AbortWithError(...)
+      return      
+  - pattern-not-inside: |
+      $C.AbortWithStatus(...)
+      return      
+  - pattern-not-inside: |
+      $C.AbortWithStatusJSON(...)
+      return      
