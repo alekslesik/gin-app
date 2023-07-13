@@ -1,0 +1,10 @@
+{{ define "abc/xyz" }}
+<!-- ok: template-posts-to-self -->
+<form action="/abc/xyz"></form>
+<!-- ruleid: template-posts-to-self -->
+<form action="/mno/xyz"></form>
+<!-- ruleid: template-posts-to-self -->
+<form action="abc/xyz"></form>
+<!-- ruleid: template-posts-to-self -->
+<form action="xyz"></form>
+{{ end }}

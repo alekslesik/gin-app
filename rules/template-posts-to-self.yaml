@@ -1,0 +1,16 @@
+---
+rules:
+  - id: template-posts-to-self
+    languages: [generic]
+    paths:
+      include:
+        - "*.html"
+    message: html template form should post to itself
+    severity: WARNING
+    patterns:
+      - pattern-inside: |
+          {{ define "$DIR/$TEMPLATE" }}
+          ...
+          {{ end }}
+      - pattern: <form action="...">...</form>
+      - pattern-not: <form action="/$DIR/$TEMPLATE">...</form>
