@@ -1,0 +1,19 @@
+---
+rules:
+  - id: test-handler-naming
+    languages: [go]
+    message: Naming of tests for handlers should be test<Thing><CrudAction><Method><Any>
+    severity: WARNING
+    patterns:
+      - pattern-inside: |
+          func $FUNC($T *testing.T) {
+            ...
+            $HELPER($T, ...)
+            ...
+          }
+      - metavariable-regex:
+          metavariable: $HELPER
+          regex: "(post|get)HasStatus"
+      - metavariable-regex:
+          metavariable: $FUNC
+          regex: "^test(?!([A-Z][a-zA-Z]*)(Index|Show|New|Edit)(Delete|Get|Patch|Post))"
