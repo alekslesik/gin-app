@@ -1,0 +1,19 @@
+---
+rules:
+  - id: error-failnow-fatal
+    languages: [go]
+    message: t.Error or t.Log followed by t.FailNow should just call t.Fatal
+    severity: WARNING
+    pattern-either:
+      - pattern: |
+          $T.Error(...)
+          $T.FailNow()
+      - pattern: |
+          $T.Errorf(...)
+          $T.FailNow()
+      - pattern: |
+          $T.Log(...)
+          $T.FailNow()
+      - pattern: |
+          $T.Logf(...)
+          $T.FailNow()
