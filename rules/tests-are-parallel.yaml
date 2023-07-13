@@ -1,0 +1,21 @@
+---
+rules:
+- id: tests-are-parallel
+  languages: [go]
+  message: test cases must call t.Parallel
+  severity: WARNING
+  patterns:
+  - pattern: |
+      func $F($T *testing.T) {
+        ...
+      }
+  - pattern-not: |
+      func $F($T *testing.T) {
+        $T.Parallel()
+        ...
+      }
+  - pattern-not: |
+      func $F($T *testing.T) {
+        $T.Helper()
+        ...
+      }      
