@@ -1,0 +1,28 @@
+// ok: template-header-footer
+{{ define "base/blah" }}
+    anything
+{{ end }}
+
+// ruleid: template-header-footer
+{{ define "thing/blah" }}
+    anything
+{{ end }}
+
+// ok: template-header-footer
+{{ define "stuff/new" }}
+{{ template "base/header" . }}
+    anything
+{{ template "base/footer" . }}
+{{ end }}
+
+// ruleid: template-header-footer
+{{ define "stuff/new" }}
+    anything
+{{ template "base/footer" . }}
+{{ end }}
+
+// ruleid: template-header-footer
+{{ define "stuff/new" }}
+{{ template "base/header" . }}
+    anything
+{{ end }}

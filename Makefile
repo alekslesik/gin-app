@@ -48,3 +48,10 @@ $(CMDS): $(ALLGO)
 report.xml: $(ALLGO) Makefile
 	go test $(TESTFLAGS) -v ./... 2>&1 | go-junit-report > $@
 	go tool cover -func .coverage/$(PROJECT).out
+
+
+######### SEMGREP #########
+# run semgrep tests
+.PHONY: semgrep
+semgrep:
+	. venv/bin/activate && semgrep -q --test rules

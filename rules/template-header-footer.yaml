@@ -1,0 +1,22 @@
+rules:
+- id: template-header-footer
+  languages: [generic]
+  paths:
+    include:
+    - "*.html"
+  message: html templates include header+footer
+  severity: WARNING
+  patterns:
+  - pattern-inside: |
+      {{ define "$DIR/$PAGE" }}
+      ...
+      {{ end }}
+  - metavariable-regex:
+      metavariable: $DIR
+      regex: (?!base)
+  - pattern-not-inside: |
+      {{ define "$DIR/$PAGE" }}
+      {{ template "base/header" . }}
+      ... ... ... ... ...
+      {{ template "base/footer" . }}
+      {{ end }} 

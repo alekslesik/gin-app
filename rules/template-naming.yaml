@@ -1,0 +1,20 @@
+---
+rules:
+- id: template-naming
+  languages: [generic]
+  paths:
+    include:
+    - "*.html"
+  message: html template does not conform to naming scheme
+  severity: WARNING
+  patterns:
+  - pattern-inside: |
+      {{ define "$DIR/$PAGE" }}
+      ...
+      {{ end }}
+  - metavariable-regex:
+      metavariable: $DIR
+      regex: (?!base)
+  - metavariable-regex:
+      metavariable: $PAGE
+      regex: '(?!^(delete|edit|new|list|show)$)'
