@@ -1,0 +1,19 @@
+---
+rules:
+- id: test-helpers-dont-return-error
+  languages: [go]
+  message: test helpers must not return error
+  severity: WARNING
+  pattern-either:
+  - pattern: |
+      func $F(..., $T *testing.T, ...) error {
+        $T.Helper()
+        ...
+      }
+  # XXX The pattern below doesn't work the way it should. See
+  # https://github.com/returntocorp/semgrep/issues/4896
+  - pattern: |
+      func $F(..., $T *testing.T, ...) (..., error, ...) {
+        $T.Helper()
+        ...
+      }   
