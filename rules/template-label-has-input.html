@@ -1,0 +1,42 @@
+{{ define "abc" }}
+<form action="/mno/xyz">
+    <label for="aaa">Aaa</label>
+
+    <!-- ok: template-label-has-input -->
+    <input type="text" name="aaa" id="aaa">
+    <label class="my-label" for="aaa">Aaa</label>
+
+    <!-- ok: template-label-has-input -->
+    <input
+        name="aaa"
+        type="text"
+        class="xyz"
+        id="aaa"
+    >
+    <label class="my-label" for="aaa">Aaa</label>
+
+    <!-- ok: template-label-has-input -->
+    <input
+        id="aaa"
+        name="aaa"
+        type="text"
+        class="xyz"
+    >
+    <label for="aaa">Aaa</label>
+
+    <!-- ruleid: template-label-has-input -->
+    <input type="text" name="bbb" id="aaa">
+    <label for="aaa">Aaa</label>
+
+    <!-- ruleid: template-label-has-input -->
+    <input type="text" name="aaa" id="bbb">
+    <label for="aaa">Aaa</label>
+
+    <!-- ruleid: template-label-has-input -->
+    <input type="text" name="aaa">
+    <label for="aaa">Aaa</label>
+    
+    <!-- ruleid: template-label-has-input -->
+    <input type="text" id="aaa">
+</form>
+{{ end }}

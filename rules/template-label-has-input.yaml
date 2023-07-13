@@ -1,0 +1,16 @@
+---
+rules:
+- id: template-label-has-input
+  languages: [generic]
+  paths:
+    include:
+    - "*.html"
+  message: html template label must have corresponding input
+  severity: WARNING
+  patterns:
+  - pattern-inside: |
+      <label ... for="$NAME" ...>...</label>
+      ...
+  - pattern: <input ...>
+  - pattern-not: <input ... name="$NAME" ... id="$NAME" ...>
+  - pattern-not: <input ... id="$NAME" ... name="$NAME" ...>
