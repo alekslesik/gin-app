@@ -10,8 +10,4 @@ python3 -m venv ./venv
 
 
 
-
-
-https://universalglue.dev/series/how-to-build-a-web-app-with-gin/
-
-https://universalglue.dev/posts/semgrep-rules-for-go-web-projects/
+https://universalglue.dev/posts/validating-forms-with-gin/
