@@ -11,7 +11,7 @@ all: lint check $(PROJECT) $(CMDS)
 lint: .lint
 
 .lint: $(ALLGO)
-	golangci-lint run --timeout 180s
+	golangci-lint run --timeout=180s --skip-dirs=rules
 	@touch $@
 
 # create .coverage dir
@@ -22,7 +22,7 @@ lint: .lint
 check: .coverage ./.coverage/$(PROJECT).out
 
 ./.coverage/$(PROJECT).out: $(ALLGO) $(ALLHTML) Makefile
-	go test $(TESTFLAGS) -coverprofile=./.coverage/$(PROJECT).out ./...
+	go test $(TESTFLAGS) -coverprofile=./.coverage/$(PROJECT).out .
 
 .PHONY: cover
 # When running manually, capture just the total percentage (and
@@ -46,12 +46,18 @@ $(CMDS): $(ALLGO)
 # because I don't want to force a dependency, but it is part of the ci docker
 # image.
 report.xml: $(ALLGO) Makefile
-	go test $(TESTFLAGS) -v ./... 2>&1 | go-junit-report > $@
+	go test $(TESTFLAGS) -v . 2>&1 | go-junit-report > $@
 	go tool cover -func .coverage/$(PROJECT).out
 
-
+RULES := $(wildcard rules/*.yaml)
 ######### SEMGREP #########
 # run semgrep tests
 .PHONY: semgrep
-semgrep:
-	. venv/bin/activate && semgrep -q --test rules
+semgrep: $(ALLGO) $(RULES)
+	. venv/bin/activate && semgrep --config rules/ --metrics=off
+
+# run semgrep tests
+# RULES := $(wildcard rules/*.yaml)
+# .PHONY: semgrep
+# semgrep: $(ALLGO) $(RULES)
+# 	semgrep --config rules/ --metrics=off

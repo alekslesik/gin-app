@@ -20,9 +20,9 @@ type Book struct {
 func setupRouter(r *gin.Engine, db *gorm.DB) {
 	r.LoadHTMLGlob("templates/**/*.html")
 	r.Use(connectDatabase(db))
-	r.GET("/books/", bookIndexHandler)
-	r.GET("/books/new", bookNewGetHandler)
-	r.POST("/books/new", bookNewPostHandler)
+	r.GET("/books/", bookIndexGet)
+	r.GET("/books/new", bookNewGet)
+	r.POST("/books/new", bookNewPost)
 	r.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusMovedPermanently, "/books/")
 	})
@@ -65,7 +65,7 @@ func main() {
 	}
 }
 
-func bookIndexHandler(ctx *gin.Context) {
+func bookIndexGet(ctx *gin.Context) {
 	db := ctx.Value("database").(*gorm.DB)
 	books := []Book{}
 
@@ -77,11 +77,11 @@ func bookIndexHandler(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "books/index.html", gin.H{"books": books})
 }
 
-func bookNewGetHandler(ctx *gin.Context) {
+func bookNewGet(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "books/new.html", gin.H{})
 }
 
-func bookNewPostHandler(ctx *gin.Context) {
+func bookNewPost(ctx *gin.Context) {
 	book := &Book{}
 
 	if err := ctx.Bind(book); err != nil {
