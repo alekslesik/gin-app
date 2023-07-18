@@ -43,6 +43,7 @@ func TestBookIndexTable(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
+			tC := tC
 			t.Parallel()
 
 			db := freshDb(t)
@@ -90,98 +91,7 @@ func TestBookNewGet(t *testing.T) {
 	}
 }
 
-func TestBookNewPost1(t *testing.T) {
-	t.Parallel()
-	testCases := []struct {
-		name   string
-		data   gin.H
-		status int
-	}{
-		{
-			name:   "nominal",
-			data:   gin.H{"title": "my book", "author": "me"},
-			status: http.StatusFound,
-		},
-	}
-
-	for i := range testCases {
-		tC := &testCases[i]
-		t.Run(tC.name, func(t *testing.T) {
-			t.Parallel()
-			db := freshDb(t)
-			postHasStatus(t, db, "/books/new", &tC.data, tC.status)
-		})
-	}
-}
-
-func TestBookNewPost2(t *testing.T) {
-	t.Parallel()
-
-	dropTable := func(t *testing.T, db *gorm.DB) {
-		err := db.Migrator().DropTable("books")
-		if err != nil {
-			t.Fatalf("error dropping table 'books': %s", err)
-		}
-	}
-
-	testCases := []struct {
-		name   string
-		data   gin.H
-		setup  func(*testing.T, *gorm.DB)
-		status int
-	}{
-		{
-			// This causes Bind() to fail, because ID is an integer
-			// field and the parsing will fail when it tries to map
-			// the ID.
-			name:   "bind_error",
-			data:   gin.H{"ID": "xxx", "title": "mytitle", "author": "me"},
-			status: http.StatusBadRequest,
-		},
-		{
-			// This makes the manual field validation fail because the
-			// author is empty.
-			name:   "empty_author",
-			data:   gin.H{"title": "1"},
-			status: http.StatusBadRequest,
-		},
-		{
-			// This makes the manual field validation fail because the
-			// title is empty.
-			name:   "empty_title",
-			data:   gin.H{"author": "9"},
-			status: http.StatusBadRequest,
-		},
-		{
-			// This makes the manual field validation fail because both
-			// title and author are empty.
-			name:   "empty",
-			data:   gin.H{},
-			status: http.StatusBadRequest,
-		},
-		{
-			name:   "db_error",
-			data:   gin.H{"title": "a", "author": "b"},
-			setup:  dropTable,
-			status: http.StatusInternalServerError,
-		},
-	}
-
-	for i := range testCases {
-		tC := &testCases[i]
-		t.Run(tC.name, func(t *testing.T) {
-			t.Parallel()
-			db := freshDb(t)
-			if tC.setup != nil {
-				tC.setup(t, db)
-			}
-
-			_ = postHasStatus(t, db, "/books/new", &tC.data, tC.status)
-		})
-	}
-}
-
-func TestBookNewPost3(t *testing.T) {
+func TestBookNewPost(t *testing.T) {
 	t.Parallel()
 
 	dropTable := func(t *testing.T, db *gorm.DB) {
@@ -192,10 +102,11 @@ func TestBookNewPost3(t *testing.T) {
 	}
 
 	tcs := []struct {
-		name   string
-		data   gin.H
-		setup  func(*testing.T, *gorm.DB)
-		status int
+		name      string
+		data      gin.H
+		setup     func(*testing.T, *gorm.DB)
+		status    int
+		fragments []string
 	}{
 		{
 			name:   "nominal",
@@ -203,33 +114,35 @@ func TestBookNewPost3(t *testing.T) {
 			status: http.StatusFound,
 		},
 		{
-			// This causes Bind() to fail, because ID is an integer
-			// field and the parsing will fail when it tries to map
-			// the ID.
-			name:   "bind_error",
-			data:   gin.H{"ID": "xxx", "title": "mytitle", "author": "me"},
-			status: http.StatusBadRequest,
-		},
-		{
-			// This makes the manual field validation fail because the
+			// This makes the field validation fail because the
 			// author is empty.
 			name:   "empty_author",
 			data:   gin.H{"title": "1"},
 			status: http.StatusBadRequest,
+			fragments: []string{
+				"Author is required, but was empty",
+			},
 		},
 		{
-			// This makes the manual field validation fail because the
+			// This makes the field validation fail because the
 			// title is empty.
 			name:   "empty_title",
 			data:   gin.H{"author": "9"},
 			status: http.StatusBadRequest,
+			fragments: []string{
+				"Title is required, but was empty",
+			},
 		},
 		{
-			// This makes the manual field validation fail because both
+			// This makes the field validation fail because both
 			// title and author are empty.
 			name:   "empty",
 			data:   gin.H{},
 			status: http.StatusBadRequest,
+			fragments: []string{
+				"Author is required, but was empty",
+				"Title is required, but was empty",
+			},
 		},
 		{
 			name:   "db_error",
@@ -250,7 +163,11 @@ func TestBookNewPost3(t *testing.T) {
 			w := postHasStatus(t, db, "/books/new", &tc.data,
 				tc.status)
 
-			// NEW CHECKS HERE
+			if tc.fragments != nil {
+				body := w.Body.String()
+				bodyHasFragments(t, body, tc.fragments)
+			}
+
 			if tc.status == http.StatusFound {
 				// Make sure the record is in the db.
 				books := []Book{}
@@ -277,7 +194,7 @@ func TestBookNewPost3(t *testing.T) {
 					t.Fatalf("location check error: %s", err)
 				}
 
-				if url.String()  != "/books/" {
+				if "/books/" != url.String() {
 					t.Errorf("expected location '/books/', got '%s'",
 						url.String())
 				}
@@ -285,6 +202,7 @@ func TestBookNewPost3(t *testing.T) {
 		})
 	}
 }
+
 
 // Helpers
 //* This just moves the loop at the bottom of the test function into its own function. There are a few things to note here:

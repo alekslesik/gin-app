@@ -1,0 +1,9 @@
+{{ define "base/errors.html" }}
+    {{ if .errors }}
+        {{ range .errors }}
+        <div>
+            {{ . }}
+        </div>
+        {{  end  }}
+    {{ end }}
+{{ end }}

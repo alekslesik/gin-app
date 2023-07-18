@@ -6,14 +6,15 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 type Book struct {
-	ID     uint
-	Title  string `form:"title"`
-	Author string `form:"author"`
+	ID     uint   `form:"-"`
+	Title  string `form:"title" binding:"required"`
+	Author string `form:"author" binding:"required"`
 }
 
 // Setup router
@@ -59,7 +60,7 @@ func main() {
 
 	router := gin.Default()
 	setupRouter(router, db)
-	err = router.Run(":80")
+	err = router.Run(":3000")
 	if err != nil {
 		log.Fatalf("gin Run error: %s", err)
 	}
@@ -84,15 +85,14 @@ func bookNewGet(ctx *gin.Context) {
 func bookNewPost(ctx *gin.Context) {
 	book := &Book{}
 
-	if err := ctx.Bind(book); err != nil {
-		// Note: if there's a bind error, Gin will call
-		// c.AbortWithError. We just need to return here.
-		return
-	}
+	if err := ctx.ShouldBind(book); err != nil {
+		verrs := err.(validator.ValidationErrors)
+		messages := make([]string, len(verrs))
+		for i, verr := range verrs {
+			messages[i] = fmt.Sprintf("%s is required, but was empty.", verr.Field())
+		}
 
-	// FIXME: There's a better way to do this validation!
-	if book.Title == "" || book.Author == "" {
-		ctx.AbortWithStatus(http.StatusBadRequest)
+		ctx.HTML(http.StatusBadRequest, "books/new.html", gin.H{"errors": messages})
 		return
 	}
 

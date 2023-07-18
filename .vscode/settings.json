@@ -4,6 +4,8 @@
         "Aklatan",
         "metavariable",
         "mytitle",
-        "semgrep"
+        "semgrep",
+        "verr",
+        "verrs"
     ]
 }

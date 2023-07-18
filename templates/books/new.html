@@ -1,5 +1,6 @@
 {{ define "books/new.html" }}
 {{ template "base/header.html" . }}
+{{ template "base/errors.html" . }}
 
 <h2>Add a Book</h2>
 <form action="/books/new" method="POST">
