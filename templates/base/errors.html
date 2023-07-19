@@ -1,9 +1,11 @@
 {{ define "base/errors.html" }}
-    {{ if .errors }}
-        {{ range .errors }}
-        <div>
-            {{ . }}
-        </div>
-        {{  end  }}
-    {{ end }}
+  {{ if .errors }}
+<div class="error-messages">
+    {{ range .errors }}
+    <div class="error-message">
+        {{ . }}
+    </div>
+    {{  end  }}
+</div>
+{{ end }}
 {{ end }}

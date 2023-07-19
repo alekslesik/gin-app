@@ -1,9 +1,13 @@
 package main
 
 import (
+	"embed"
 	"fmt"
+	"html/template"
+	"io/fs"
 	"log"
 	"net/http"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -11,16 +15,34 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:embed templates
+var tmplEmbed embed.FS
+
+//go:embed static
+var staticEmbedFS embed.FS
+
+type staticFS struct {
+	fs fs.FS
+}
+
+func (sfs *staticFS) Open(name string) (fs.File, error) {
+	return sfs.fs.Open(filepath.Join("static", name))
+}
+
+var staticEmbed = &staticFS{staticEmbedFS}
+
 type Book struct {
 	ID     uint   `form:"-"`
 	Title  string `form:"title" binding:"required"`
 	Author string `form:"author" binding:"required"`
 }
 
-// Setup router
 func setupRouter(r *gin.Engine, db *gorm.DB) {
-	r.LoadHTMLGlob("templates/**/*.html")
+	tmpl := template.Must(template.ParseFS(tmplEmbed, "templates/*/*.html"))
+	r.SetHTMLTemplate(tmpl)
+
 	r.Use(connectDatabase(db))
+	r.StaticFS("/static", http.FS(staticEmbed))
 	r.GET("/books/", bookIndexGet)
 	r.GET("/books/new", bookNewGet)
 	r.POST("/books/new", bookNewPost)

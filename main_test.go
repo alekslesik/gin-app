@@ -203,7 +203,6 @@ func TestBookNewPost(t *testing.T) {
 	}
 }
 
-
 // Helpers
 //* This just moves the loop at the bottom of the test function into its own function. There are a few things to note here:
 //* 1.This is marked as a t.Helper() – failures will be reported at the line number of the test case function instead of inside this function, which can make diagnosing a failing test easier.

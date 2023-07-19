@@ -1,9 +1,12 @@
 {{ define "books/index.html" }}
 {{ template "base/header.html" . }}
 <h2>My Books</h2>
-<ul>
+<ul class="books">
     {{ range .books }}
-    <li>{{ .Title }} -- {{ .Author }}</li>
+    <li class="book">
+        <span class="title">{{ .Title }}</span>
+        <span class="author">{{ .Author }}</span>
+    </li>
     {{ end }}
 </ul>
 {{ template "base/footer.html" . }}
