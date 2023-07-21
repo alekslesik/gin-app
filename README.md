@@ -10,4 +10,4 @@ python3 -m venv ./venv
 
 
 
-https://universalglue.dev/posts/validating-forms-with-gin/
+https://universalglue.dev/posts/web-accessibility-testing/

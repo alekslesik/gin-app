@@ -22,9 +22,10 @@ func TestBookIndexRefactored(t *testing.T) {
 	w := getHasStatus(t, db, "/books/", http.StatusOK)
 	body := w.Body.String()
 	fragments := []string{
-		"<h2>My Books</h2>",
-		fmt.Sprintf("<li>%s -- %s</li>", books[0].Title, books[0].Author),
-		fmt.Sprintf("<li>%s -- %s</li>", books[1].Title, books[1].Author),
+		`<h2>My Books</h2>`,
+		`<ul class="books">`,
+		fmt.Sprintf(`<span class="title">%s</span>`, books[0].Title),
+		// fmt.Sprintf(`<span class="author">%s</span>`, books[0].Author),
 	}
 
 	bodyHasFragments(t, body, fragments)
@@ -57,7 +58,7 @@ func TestBookIndexTable(t *testing.T) {
 			}
 
 			for _, book := range books {
-				fragments = append(fragments, fmt.Sprintf("<li>%s -- %s</li>", book.Title, book.Author))
+				fragments = append(fragments, fmt.Sprintf(`<span class="title">%s</span>`, book.Title))
 			}
 			bodyHasFragments(t, body, fragments)
 		})

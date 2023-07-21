@@ -1,4 +1,5 @@
 PROJECT := gin-app
+CMDS := importer
 ALLGO := $(wildcard *.go */*.go cmd/*/*.go)
 ALLHTML := $(wildcard templates/*/*.html)
 
