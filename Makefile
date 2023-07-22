@@ -116,3 +116,7 @@ vendor:
 	# @echo 'Vendoring dependencies...'
 	# go mod vendor
 
+## import csv table "./importer -db=gin-app.db -csv=goodreads_library_export.csv"
+.PHONY: csv.import
+csv.import:
+	./importer -db=gin-app.db -csv=goodreads_library_export.csv

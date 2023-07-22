@@ -2,10 +2,12 @@
     "sqltools.connections": [],
     "cSpell.words": [
         "Aklatan",
+        "autoincrement",
         "metavariable",
         "mytitle",
         "semgrep",
         "tmpl",
+        "venv",
         "verr",
         "verrs"
     ]

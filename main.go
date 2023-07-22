@@ -6,8 +6,10 @@ import (
 	"html/template"
 	"io/fs"
 	"log"
+	"math"
 	"net/http"
 	"path/filepath"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -90,14 +92,67 @@ func main() {
 
 func bookIndexGet(ctx *gin.Context) {
 	db := ctx.Value("database").(*gorm.DB)
-	books := []Book{}
 
-	if err := db.Find(&books).Error; err != nil {
+	pageStr := ctx.DefaultQuery("page", "1")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	var bookCount int64
+
+	if err := db.Table("books").Count(&bookCount).Error; err != nil {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
-	ctx.HTML(http.StatusOK, "books/index.html", gin.H{"books": books})
+	const booksPerPage = 15
+
+	pageCount := int(math.Ceil(float64(bookCount) / float64(booksPerPage)))
+	if pageCount == 0 {
+		pageCount = 1
+	}
+
+	if page < 1 || page > pageCount {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	offset := (page - 1) * booksPerPage
+
+	books := []Book{}
+
+	if err := db.Limit(booksPerPage).Offset(offset).Find(&books).Error; err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	var prevPage, nextPage string
+
+	if page > 1 {
+		prevPage = fmt.Sprintf("%d", page-1)
+	}
+
+	if page < pageCount {
+		nextPage = fmt.Sprintf("%d", page+1)
+	}
+
+	pages := make([]int, pageCount)
+
+	for i := 0; i < pageCount; i++ {
+		pages[i] = i + 1
+	}
+
+	ctx.HTML(http.StatusOK, "books/index.html", gin.H{
+		"books":     books,
+		"pageCount": pageCount,
+		"page":      page,
+		"prevPage":  prevPage,
+		"nextPage":  nextPage,
+		"pages":     pages,
+	})
 }
 
 func bookNewGet(ctx *gin.Context) {
