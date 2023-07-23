@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -95,63 +96,29 @@ func bookIndexGet(ctx *gin.Context) {
 
 	pageStr := ctx.DefaultQuery("page", "1")
 
-	page, err := strconv.Atoi(pageStr)
-	if err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
 	var bookCount int64
-
 	if err := db.Table("books").Count(&bookCount).Error; err != nil {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
 	const booksPerPage = 15
-
-	pageCount := int(math.Ceil(float64(bookCount) / float64(booksPerPage)))
-	if pageCount == 0 {
-		pageCount = 1
-	}
-
-	if page < 1 || page > pageCount {
+	p, err := paginate(pageStr, int(bookCount), booksPerPage)
+	if err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	offset := (page - 1) * booksPerPage
-
 	books := []Book{}
 
-	if err := db.Limit(booksPerPage).Offset(offset).Find(&books).Error; err != nil {
+	if err := db.Limit(booksPerPage).Offset(p.Offset).Find(&books).Error; err != nil {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
-	var prevPage, nextPage string
-
-	if page > 1 {
-		prevPage = fmt.Sprintf("%d", page-1)
-	}
-
-	if page < pageCount {
-		nextPage = fmt.Sprintf("%d", page+1)
-	}
-
-	pages := make([]int, pageCount)
-
-	for i := 0; i < pageCount; i++ {
-		pages[i] = i + 1
-	}
-
 	ctx.HTML(http.StatusOK, "books/index.html", gin.H{
-		"books":     books,
-		"pageCount": pageCount,
-		"page":      page,
-		"prevPage":  prevPage,
-		"nextPage":  nextPage,
-		"pages":     pages,
+		"Books":    books,
+		"Paginate": p,
 	})
 }
 
@@ -180,4 +147,52 @@ func bookNewPost(ctx *gin.Context) {
 	}
 
 	ctx.Redirect(http.StatusFound, "/books/")
+}
+
+type Pagination struct {
+	Page   int
+	Count  int
+	Offset int
+	Prev   int
+	Next   int
+}
+
+func (p *Pagination) Pages() []int {
+	pages := make([]int, p.Count)
+	for i := 0; i < p.Count; i++ {
+		pages[i] = i + 1
+	}
+	return pages
+}
+
+func paginate(pageStr string, n, per int) (*Pagination, error) {
+	if n < 0 || per <= 0 {
+		return nil, errors.New("invalid quantity or per-page")
+	}
+
+	p := &Pagination{}
+
+	var err error
+
+	p.Page, err = strconv.Atoi(pageStr)
+	if err != nil {
+		return nil, err
+	}
+	p.Count = int(math.Ceil(float64(n) / float64(per)))
+	if p.Count == 0 {
+		p.Count = 1
+	}
+	if p.Page < 1 || p.Page > p.Count {
+		return nil, errors.New("invalid page")
+	}
+	p.Offset = (p.Page - 1) * per
+
+	if p.Page > 1 {
+		p.Prev = p.Page - 1
+	}
+	if p.Page < p.Count {
+		p.Next = p.Page + 1
+	}
+
+	return p, nil
 }

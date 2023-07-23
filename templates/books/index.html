@@ -1,11 +1,9 @@
 {{ define "books/index.html" }}
 {{ template "base/header.html" . }}
-<h2>My Books</h2>
-
+<h1>My Books</h1>
 <div>
     Page {{ .page }} / {{ .pageCount }}
 </div>
-
 <ul class="books">
     {{ range .books }}
     <li class="book">
@@ -14,23 +12,21 @@
     </li>
     {{ end }}
 </ul>
-
-<div class="pages">
+<div>
     Pages:
-    {{ if .prevPage}}
-    <a href="/books/?page={{ .prevPage }}">&laquo;</a>
+    {{ if ne .p.Prev 0 }}
+    <a href="/books/?page={{ .p.Prev }}">&laquo;</a>
     {{ end }}
 
-    {{ range .pages }}
-        {{ if eq . $.page}} <strong>{{ . }}</strong>
-        {{ else }} <a href="/books/?page={{ . }}">{{ . }}</a>
-        {{ end }}
+    {{ range .p.Pages }}
+    {{ if eq . $.p.Page }}<strong>{{ . }}</strong>
+    {{ else }}<a href="/books/?page={{ . }}">{{ . }}</a>
+    {{ end }}
     {{ end }}
 
-    {{ if .nextPage}}
-    <a href="/books/?page={{ .nextPage }}">&raquo;;</a>
+    {{ if ne .p.Next 0 }}
+    <a href="/books/?page={{ .p.Next }}">&raquo;</a>
     {{ end }}
-</div>
-
+    </div>
 {{ template "base/footer.html" . }}
 {{ end }}
