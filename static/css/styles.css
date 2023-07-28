@@ -94,3 +94,11 @@ footer div {
 .pages {
     margin: 40px;
 }
+
+.flash-message {
+    font-weight: bolder;
+    color: #222222;
+    margin-bottom: 1em;
+    background-color: #f5f2aa;
+    padding: 0.75em;
+}

@@ -9,9 +9,12 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"gorm.io/driver/sqlite"
@@ -40,7 +43,17 @@ type Book struct {
 	Author string `form:"author" binding:"required"`
 }
 
+// !ROUTERS
 func setupRouter(r *gin.Engine, db *gorm.DB) {
+	os.Setenv("AKLATAN_SESSION_KEY", "dummy")
+	sessionKey := os.Getenv("AKLATAN_SESSION_KEY")
+	if sessionKey == "" {
+		log.Fatal("error: set AKLATAN_SESSION_KEY to a secret string and try again")
+	}
+
+	store := cookie.NewStore([]byte(sessionKey))
+	r.Use(sessions.Sessions("mysession", store))
+
 	tmpl := template.Must(template.ParseFS(tmplEmbed, "templates/*/*.html"))
 	r.SetHTMLTemplate(tmpl)
 
@@ -92,34 +105,37 @@ func main() {
 	}
 }
 
-func bookIndexGet(c *gin.Context) {
-	db := c.Value("database").(*gorm.DB)
-	pageStr := c.DefaultQuery("page", "1")
+// !HANDLERS
+func bookIndexGet(ctx *gin.Context) {
+	db := ctx.Value("database").(*gorm.DB)
+	pageStr := ctx.DefaultQuery("page", "1")
 	var bookCount int64
 	if err := db.Table("books").Count(&bookCount).Error; err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
+		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 	const booksPerPage = 15
 	p, err := paginate(pageStr, int(bookCount), booksPerPage)
 	if err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
+		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	books := []Book{}
 	if err := db.Limit(booksPerPage).Offset(p.Offset).Find(&books).Error; err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
+		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
-	c.HTML(http.StatusOK, "books/index.html", gin.H{
-		"books": books,
-		"p":     p,
+	ctx.HTML(http.StatusOK, "books/index.html", gin.H{
+		"books":    books,
+		"messages": flashes(ctx),
+		"p":        p,
 	})
 }
+
 func bookNewGet(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "books/new.html", gin.H{})
+	ctx.HTML(http.StatusOK, "books/new.html", gin.H{"messages": flashes(ctx)})
 }
 
 func bookNewPost(ctx *gin.Context) {
@@ -142,9 +158,11 @@ func bookNewPost(ctx *gin.Context) {
 		return
 	}
 
+	flashMessage(ctx, fmt.Sprintf("New book '%s' saved successfully.", book.Title))
 	ctx.Redirect(http.StatusFound, "/books/")
 }
 
+// !PAGINATION
 type Pagination struct {
 	Page   int
 	Count  int
@@ -191,4 +209,26 @@ func paginate(pageStr string, n, per int) (*Pagination, error) {
 	}
 
 	return p, nil
+}
+
+// !HELPERS
+func flashMessage(ctx *gin.Context, message string) {
+	session := sessions.Default(ctx)
+	session.AddFlash(message)
+	if err := session.Save(); err != nil {
+		log.Printf("error in flashMessage saving session: %s", err)
+	}
+}
+
+func flashes(ctx *gin.Context) []interface{} {
+	session := sessions.Default(ctx)
+	flashes := session.Flashes()
+
+	if len(flashes) != 0 {
+		if err := session.Save(); err != nil {
+			log.Printf("error in flashes saving session: %s", err)
+		}
+	}
+
+	return flashes
 }

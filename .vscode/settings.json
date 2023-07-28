@@ -4,6 +4,7 @@
         "Aklatan",
         "autoincrement",
         "metavariable",
+        "mysession",
         "mytitle",
         "semgrep",
         "tmpl",

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 
@@ -22,7 +23,7 @@ func TestBookIndexRefactored(t *testing.T) {
 	w := getHasStatus(t, db, "/books/", http.StatusOK)
 	body := w.Body.String()
 	fragments := []string{
-		`<h2>My Books</h2>`,
+		`<h1>My Books</h1>`,
 		`<ul class="books">`,
 		fmt.Sprintf(`<span class="title">%s</span>`, books[0].Title),
 		// fmt.Sprintf(`<span class="author">%s</span>`, books[0].Author),
@@ -54,7 +55,7 @@ func TestBookIndexTable(t *testing.T) {
 			body := w.Body.String()
 
 			fragments := []string{
-				"<h2>My Books</h2>",
+				"<h1>My Books</h1>",
 			}
 
 			for _, book := range books {
@@ -199,6 +200,14 @@ func TestBookNewPost(t *testing.T) {
 					t.Errorf("expected location '/books/', got '%s'",
 						url.String())
 				}
+
+				w := getCookieHasStatus(t, db, url.String(), w.Result(), http.StatusOK)
+				fragments := []string{
+					fmt.Sprintf("New book &#39;%s&#39; saved successfully.", books[0].Title),
+				}
+
+				bodyHasFragments(t, w.Body.String(), fragments)
+
 			}
 		})
 	}
@@ -335,7 +344,7 @@ func FuzzPaginate(f *testing.F) {
 			t.Fatal("p is nil")
 		}
 		if p.Page < 1 || p.Page > p.Count {
-			f.Fatalf("p.Page is %d (count %d)", p.Page, p.Count)
+			t.Fatalf("p.Page is %d (count %d)", p.Page, p.Count)
 		}
 		if p.Count <= 0 {
 			t.Fatalf("p.Count is %d", p.Count)
@@ -358,4 +367,26 @@ func FuzzPaginate(f *testing.F) {
 			t.Fatalf("next %d-1 != %d", p.Next, p.Page)
 		}
 	})
+}
+
+func getCookieHasStatus(t *testing.T, db *gorm.DB, path string, r *http.Response, status int) *httptest.ResponseRecorder {
+	t.Helper()
+	w := httptest.NewRecorder()
+	ctx, router := gin.CreateTestContext(w)
+	os.Setenv("AKLATAN_SESSION_KEY", "dummy")
+	setupRouter(router, db)
+	req, err := http.NewRequestWithContext(ctx, "GET", path, nil)
+	if err != nil {
+		t.Errorf("got error: %s", err)
+	}
+
+	if r != nil {
+		req.Header["Cookie"] = r.Header["Set-Cookie"]
+	}
+
+	router.ServeHTTP(w, req)
+	if status != w.Code {
+		t.Errorf("expected response code %d, got %d", status, w.Code)
+	}
+	return w
 }

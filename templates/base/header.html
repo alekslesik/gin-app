@@ -24,4 +24,11 @@
                 </ul>
             </nav>
         </header>
+            {{ if .messages}}
+                {{ range .messages}}
+                <div class="flash-message" role="alert">
+                    {{ . }}
+                </div>
+            {{ end }}
+        {{ end }}
         {{ end }}
