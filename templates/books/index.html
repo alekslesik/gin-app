@@ -2,7 +2,7 @@
 {{ template "base/header.html" . }}
 <h1>My Books</h1>
 <div>
-    Page {{ .page }} / {{ .pageCount }}
+    Page {{ .p.Page }} / {{ .p.Count }}
 </div>
 <ul class="books">
     {{ range .books }}

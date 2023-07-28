@@ -70,6 +70,7 @@ func setupDatabase(db *gorm.DB) error {
 	return nil
 }
 
+// !MAIN
 func main() {
 	// open database
 	db, err := gorm.Open(sqlite.Open("gin-app.db"), &gorm.Config{})
@@ -91,37 +92,32 @@ func main() {
 	}
 }
 
-func bookIndexGet(ctx *gin.Context) {
-	db := ctx.Value("database").(*gorm.DB)
-
-	pageStr := ctx.DefaultQuery("page", "1")
-
+func bookIndexGet(c *gin.Context) {
+	db := c.Value("database").(*gorm.DB)
+	pageStr := c.DefaultQuery("page", "1")
 	var bookCount int64
 	if err := db.Table("books").Count(&bookCount).Error; err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-
 	const booksPerPage = 15
 	p, err := paginate(pageStr, int(bookCount), booksPerPage)
 	if err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	books := []Book{}
-
 	if err := db.Limit(booksPerPage).Offset(p.Offset).Find(&books).Error; err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
-	ctx.HTML(http.StatusOK, "books/index.html", gin.H{
-		"Books":    books,
-		"Paginate": p,
+	c.HTML(http.StatusOK, "books/index.html", gin.H{
+		"books": books,
+		"p":     p,
 	})
 }
-
 func bookNewGet(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "books/new.html", gin.H{})
 }
