@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -52,16 +53,47 @@ func TestBookIndexTable(t *testing.T) {
 			books := createBooks(t, db, tC.count)
 
 			w := getHasStatus(t, db, "/books/", http.StatusOK)
-			body := w.Body.String()
-
-			fragments := []string{
-				"<h1>My Books</h1>",
+			doc, err := goquery.NewDocumentFromReader(w.Body)
+			if err != nil {
+				t.Fatalf("NewDocumentFromReader error: %s", err)
 			}
 
-			for _, book := range books {
-				fragments = append(fragments, fmt.Sprintf(`<span class="title">%s</span>`, book.Title))
+			// Check the page header.
+			h1 := doc.Find("h1").Text()
+			if h1 != "My Books" {
+				t.Errorf("expected h1 'My Books', got '%s'", h1)
 			}
-			bodyHasFragments(t, body, fragments)
+
+			// 1. Get all of the <span class="title"> elements.
+			// 2. Verify we get the correct number.
+			// 3. Iterate over the selections, checking that the content of
+			//    each one matches the corresponding book title.
+			titleSpans := doc.Find("span.title")
+			if tC.count != titleSpans.Length() {
+				t.Fatalf("expected %d span.title elements, got %d",
+					tC.count, titleSpans.Length())
+			}
+			titleSpans.Each(func(i int, s *goquery.Selection) {
+				title := books[i].Title
+				if title != s.Text() {
+					t.Errorf("span.title[%d] expected '%s', got '%s'",
+						i, title, s.Text())
+				}
+			})
+
+			// Do the same thing for authors.
+			authorSpans := doc.Find("span.author")
+			if tC.count != authorSpans.Length() {
+				t.Fatalf("expected %d span.author elements, got %d",
+					tC.count, authorSpans.Length())
+			}
+			authorSpans.Each(func(i int, s *goquery.Selection) {
+				author := books[i].Author
+				if author != s.Text() {
+					t.Errorf("span.author[%d] expected '%s', got '%s'",
+						i, author, s.Text())
+				}
+			})
 		})
 	}
 }
@@ -80,15 +112,18 @@ func TestBookNewGet(t *testing.T) {
 			t.Parallel()
 			db := freshDb(t)
 			w := getHasStatus(t, db, "/books/new", http.StatusOK)
-			body := w.Body.String()
-			fragments := []string{
-				"<h2>Add a Book</h2>",
-				`<form action="/books/new" method="POST">`,
-				`<input type="text" name="title" id="title"`,
-				`<input type="text" name="author" id="author"`,
-				`<button type="submit"`,
+			doc, err := goquery.NewDocumentFromReader(w.Body)
+			if err != nil {
+				t.Fatalf("NewDocumentFromReader error: %s", err)
 			}
-			bodyHasFragments(t, body, fragments)
+			fragments := []Fragment{
+				{"h1", "Add a Book"},
+				{`form[action="/books/new"]`, ""},
+				{`input[id="title"]`, ""},
+				{`input[id="author"]`, ""},
+				{`button[type="submit"]`, "Save"},
+			}
+			docHasFragments(t, doc, fragments)
 		})
 	}
 }
@@ -220,6 +255,27 @@ func TestBookNewPost(t *testing.T) {
 //* 3.Both 1 and 2 are why every test helper function should take a *testing.T as the first argument.
 //* 4.I try to name my verification-type helper functions in the form thingHasProperty or thingIsStatus. I think this makes it easier to read what test code is checking.
 
+type Fragment struct {
+	Selector string
+	Contents string
+}
+
+func docHasFragments(t *testing.T, doc *goquery.Document, fragments []Fragment) {
+	t.Helper()
+	for _, fragment := range fragments {
+		sel := doc.Find(fragment.Selector)
+		if sel.Length() == 0 {
+			t.Errorf("fragment '%s' not found", fragment.Selector)
+			return
+		}
+		text := sel.Text()
+		if !strings.Contains(text, fragment.Contents) {
+			t.Fatalf("fragment '%s' should contain '%s', got '%s'",
+				fragment.Selector, fragment.Contents, text)
+		}
+	}
+}
+
 // Check that template includes fragment
 func bodyHasFragments(t *testing.T, body string, fragments []string) bool {
 	t.Helper()
@@ -228,7 +284,6 @@ func bodyHasFragments(t *testing.T, body string, fragments []string) bool {
 			t.Fatalf("expected body to contain '%s', got %s", fragment, body)
 		}
 	}
-
 	return true
 }
 
